@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: درگاه پرداخت سواپ‌ولت
- * Description: درگاه کریپتویی سواپ‌ولت برای ووکامرس که قابلیت پرداخت با ارزهای دیجیتال را به فروشگاه شما اضافه می‌کند.
+ * Plugin Name: درگاه پرداخت سواپ‌ولت | SwapWallet Payment Gateway
+ * Description: درگاه کریپتویی سواپ‌ولت برای ووکامرس (پرداخت رمزارزی) | SwapWallet crypto payment gateway for WooCommerce.
  * Author: SwapWallet
  * Author URI: https://swapwallet.app
  * Version: 1.0

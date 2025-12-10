@@ -16,6 +16,8 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
         private $failed_massage;
         private $debug;
         private $logger;
+        private $language;
+        private $show_icon;
 
         public function __construct()
         {
@@ -24,8 +26,8 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
             $this->id = 'WC_Swap_Pay';
             $this->icon = 'https://swapwallet.app/media/public/assets/wallets/swapwallet.png';
             $this->has_fields = false;
-            $this->method_title = 'سواپ‌ولت';
-            $this->method_description = 'پرداخت کریپتویی با درگاه سواپ‌ولت';
+
+            $this->language = strtolower($this->detect_language());
 
             $this->init_form_fields();
             $this->init_settings();
@@ -45,6 +47,13 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
             $this->success_massage = $this->get_option('success_massage');
             $this->debug = $this->get_option('debug', 'no') === 'yes';
             $this->logger = function_exists('wc_get_logger') ? wc_get_logger() : null;
+            $this->language = strtolower($this->get_option('language', $this->language));
+            $this->method_title = $this->get_option('title', $this->get_lang_text('method_title'));
+            $this->method_description = $this->get_option('description', $this->get_lang_text('method_description'));
+            $this->show_icon = $this->get_option('show_icon', 'yes') === 'yes';
+            if (!$this->show_icon) {
+                $this->icon = '';
+            }
 
             if (version_compare(WOOCOMMERCE_VERSION, '2.0.0', '>=')) {
                 add_action(
@@ -73,64 +82,81 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
         {
             $this->form_fields = [
                 'enabled' => [
-                    'title' => 'فعال/غیرفعال کردن',
+                    'title' => $this->t('field_enable_title'),
                     'type' => 'checkbox',
-                    'label' => 'فعال‌سازی درگاه سواپ‌ولت',
+                    'label' => $this->t('field_enable_label'),
                     'default' => 'yes'
                 ],
                 'title' => [
-                    'title' => 'عنوان',
+                    'title' => $this->t('field_title_title'),
                     'type' => 'text',
-                    'default' => 'پرداخت با سواپ‌ولت'
+                    'default' => $this->get_lang_text('gateway_title')
                 ],
                 'description' => [
-                    'title' => 'توضیحات',
+                    'title' => $this->t('field_description_title'),
                     'type' => 'text',
-                    'default' => 'درگاه پرداخت سواپ‌ولت روشی امن و سریع برای پرداخت‌های کریپتویی است.'
+                    'default' => $this->get_lang_text('gateway_description')
                 ],
                 'network' => [
-                    'title' => 'شبکه فعال جهت پرداخت دلاری (TON, BSC, TRON)',
+                    'title' => $this->t('field_network_title'),
                     'type' => 'text',
                     'default' => 'BSC'
                 ],
                 'username' => [
-                    'title' => 'نام کاربری درگاه سواپ‌ولت',
+                    'title' => $this->t('field_username_title'),
                     'type' => 'text',
                 ],
                 'ttl' => [
-                    'title' => 'مدت زمان اعتبار فاکتور پرداخت (دقیقه)',
+                    'title' => $this->t('field_ttl_title'),
                     'type' => 'number',
                     'default' => 60
                 ],
                 'underPaidCoveragePercent' => [
-                    'title' => 'درصد پوشش پرداخت کمتر از حد',
+                    'title' => $this->t('field_underpaid_title'),
                     'type' => 'number',
                     'default' => 0.0
                 ],
                 'api_key' => [
-                    'title' => 'API Key',
+                    'title' => $this->t('field_api_key_title'),
                     'type' => 'text',
                     'default' => 'apikey-aaaabbbbccccdddd'
                 ],
+                'language' => [
+                    'title' => $this->t('field_language_title'),
+                    'type' => 'select',
+                    'default' => $this->detect_language(),
+                    'options' => [
+                        'fa' => 'فارسی',
+                        'en' => 'English',
+                    ],
+                    'description' => $this->t('field_language_description'),
+                ],
                 'debug' => [
-                    'title' => 'عیب‌یابی (Debug)',
-                    'label' => 'فعال کردن لاگ‌برداری',
+                    'title' => $this->t('field_debug_title'),
+                    'label' => $this->t('field_debug_label'),
                     'type' => 'checkbox',
                     'default' => 'no',
-                    'description' => 'در صورت فعال بودن، رویدادهای درگاه در لاگ ووکامرس ثبت می‌شوند.',
+                    'description' => $this->t('field_debug_description'),
                 ],
                 'success_massage' => [
-                    'title' => 'پیام پرداخت موفق',
+                    'title' => $this->t('field_success_title'),
                     'type' => 'textarea',
-                    'description' => 'متن پیامی که میخواهید بعد از پرداخت موفق به کاربر نمایش دهید را وارد نمایید . همچنین می توانید از شورت کد {support_code} برای نمایش کد رهگیری (کد تراکنش سواپ‌ولت) استفاده نمایید .',
-                    'default' => 'با تشکر از شما . سفارش شما با موفقیت پرداخت شد .',
+                    'description' => $this->t('field_success_description'),
+                    'default' => $this->get_lang_text('success_message'),
                 ],
                 'failed_massage' => [
-                    'title' => 'پیام پرداخت ناموفق',
+                    'title' => $this->t('field_failed_title'),
                     'type' => 'textarea',
-                    'description' => 'متن پیامی که میخواهید بعد از پرداخت ناموفق به کاربر نمایش دهید را وارد نمایید . همچنین می توانید از شورت کد {fault} برای نمایش دلیل خطای رخ داده استفاده نمایید . این دلیل خطا از سایت سواپ‌ولت ارسال میگردد .',
-                    'default' => 'پرداخت شما ناموفق بوده است . لطفا مجددا تلاش نمایید یا در صورت بروز اشکال با مدیر سایت تماس بگیرید .',
-                ]
+                    'description' => $this->t('field_failed_description'),
+                    'default' => $this->get_lang_text('failed_message'),
+            ],
+            'show_icon' => [
+                'title' => $this->t('field_show_icon_title'),
+                'label' => $this->t('field_show_icon_label'),
+                'type' => 'checkbox',
+                'default' => 'yes',
+                'description' => $this->t('field_show_icon_description'),
+            ],
             ];
         }
 
@@ -184,6 +210,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
                     ],
                     'feePayer' => 'USER',
                     'ttl' => $this->ttl,
+                    'userLanguage' => strtoupper($this->language),
                     'underPaidCoveragePercent' => $this->underPaidCoveragePercent,
                     'returnUrl' => $CallbackURL,
                     'orderId' => $order_id,
@@ -194,7 +221,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
 
             if (is_wp_error($response)) {
                 $this->log('Invoice creation failed (http error)', ['order_id' => $order_id, 'error' => $response->get_error_message()], 'error');
-                wc_add_notice('خطای ارتباط با درگاه سواپ‌ولت. لطفاً بعداً تلاش کنید.', 'error');
+                wc_add_notice($this->t('error_gateway_connect'), 'error');
                 return [
                     'result' => 'failure',
                     'error' => $response->get_error_message(),
@@ -215,8 +242,8 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
                     return $result;
                 }
 
-                $errorMessage = $response['error']['localizedMessage'] ?? 'خطایی رخ داد';
-                wc_add_notice('خطای پرداخت: ' . $errorMessage, 'error');
+                $errorMessage = $response['error']['localizedMessage'] ?? $this->t('generic_error');
+                wc_add_notice($this->t('payment_error_prefix') . $errorMessage, 'error');
                 return [
                     'result' => 'failure',
                     'error' => $errorMessage,
@@ -226,7 +253,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
             $paymentUrl = $response['result']['paymentUrl'] ?? null;
             if (!$paymentUrl) {
                 $this->log('Missing paymentUrl in invoice response', ['order_id' => $order_id, 'response' => $response], 'warning');
-                wc_add_notice('آدرس پرداخت از درگاه دریافت نشد.', 'error');
+                wc_add_notice($this->t('missing_payment_url'), 'error');
                 return [
                     'result' => 'failure',
                     'error' => 'missing payment url',
@@ -255,16 +282,16 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
 
                 if ($invoice_status === 'PAID') {
                     $order->payment_complete();
-                    $order->add_order_note('پرداخت با موفقیت انجام شد از طریق سواپ‌ولت.');
+                    $order->add_order_note($this->t('order_note_paid'));
                     return [
                         'result' => 'success',
                         'redirect' => $order->get_checkout_order_received_url()
                     ];
                 } else if ($invoice_status === 'EXPIRED') {
-                    $order->update_status('expired', 'سفارش منقضی شد به دلیل اتمام زمان/عدم پرداخت.');
+                    $order->update_status('expired', $this->t('duplicate_order_expired'));
                     return [
                         'result' => 'failure',
-                        'error' => 'سفارش منقضی شد به دلیل اتمام زمان/عدم پرداخت.'
+                        'error' => $this->t('duplicate_order_expired')
                     ];
                 } else if ($invoice_status === 'ACTIVE') {
                     $invoice_url = $invoice['paymentUrl'] ?? ($invoice['paymentLinks'][0]['url'] ?? null);
@@ -307,7 +334,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
         {
             $order_id = isset($_GET['wc_order']) ? absint($_GET['wc_order']) : 0;
             if (!$order_id) {
-                $this->add_failure_notice('شماره سفارش وجود ندارد .');
+                $this->add_failure_notice($this->t('missing_order'));
                 $this->log('Return: missing order id', $_GET, 'warning');
                 wp_redirect(wc_get_checkout_url());
                 exit;
@@ -315,7 +342,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
 
             $response = $this->get_invoice($order_id);
             if (is_wp_error($response) || !is_array($response)) {
-                $this->add_failure_notice('عدم دریافت اطلاعات تراکنش از سواپ‌ولت.');
+                $this->add_failure_notice($this->t('invoice_fetch_failed'));
                 $this->log('Return: invoice fetch failed', ['order_id' => $order_id, 'error' => $response], 'error');
                 wp_redirect(wc_get_checkout_url());
                 exit;
@@ -328,7 +355,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
             $payment_url = $data['paymentUrl'] ?? ($data['paymentLinks'][0]['url'] ?? null);
 
             if (!$order || ($response['status'] ?? null) !== 'OK' || !$status) {
-                $this->add_failure_notice('اطلاعات سفارش یا وضعیت تراکنش نامعتبر است.');
+                $this->add_failure_notice($this->t('invalid_transaction'));
                 $this->log('Return: invalid response', ['order_id' => $order_id, 'response' => $response], 'warning');
                 wp_redirect(wc_get_checkout_url());
                 exit;
@@ -338,8 +365,8 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
             switch ($status) {
                 case 'PAID':
                     $order->payment_complete();
-                    $order->add_order_note('پرداخت با موفقیت انجام شد از طریق سواپ‌ولت.');
-                    $Note = sprintf('پرداخت موفقیت آمیز بود .<br/> کد رهگیری : %s', $support_code);
+                    $order->add_order_note($this->t('order_note_paid'));
+                    $Note = sprintf($this->t('order_note_paid_code'), $support_code);
                     $order->add_order_note($Note);
 
                     $Notice = wpautop(wptexturize($this->success_massage));
@@ -350,7 +377,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
                     exit;
 
                 case 'EXPIRED':
-                    $Message = 'فاکتور پرداخت منقضی شده است.';
+                    $Message = $this->t('invoice_expired');
                     $order->update_status('expired', $Message);
                     break;
 
@@ -359,16 +386,16 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
                         wp_redirect($payment_url);
                         exit;
                     }
-                    $Message = 'آدرس پرداخت در دسترس نیست.';
+                    $Message = $this->t('payment_url_missing');
                     break;
 
                 default:
-                    $Message = 'وضعیت تراکنش نامعلوم است.';
+                    $Message = $this->t('status_unknown');
                     break;
             }
 
-            $sc_id = $support_code ? '<br/>کد تراکنش : ' . $support_code : '';
-            $Note = sprintf('خطا در هنگام بازگشت از درگاه : %s %s', $Message, $sc_id);
+            $sc_id = $support_code ? '<br/>' . $this->t('transaction_code_label') . $support_code : '';
+            $Note = sprintf($this->t('return_error_note'), $Message, $sc_id);
             $order->add_order_note($Note, 1);
 
             $Notice = wpautop(wptexturize($this->failed_massage));
@@ -402,14 +429,137 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
             ]);
         }
 
+        private function get_lang_text($key, $langOverride = null)
+        {
+            $texts = [
+                'fa' => [
+                    'method_title' => 'سواپ‌ولت',
+                    'method_description' => 'پرداخت کریپتویی با درگاه سواپ‌ولت',
+                    'gateway_title' => 'پرداخت با سواپ‌ولت',
+                    'gateway_description' => 'درگاه پرداخت سواپ‌ولت روشی امن و سریع برای پرداخت‌های کریپتویی است.',
+                    'success_message' => 'با تشکر از شما . سفارش شما با موفقیت پرداخت شد .',
+                    'failed_message' => 'پرداخت شما ناموفق بوده است . لطفا مجددا تلاش نمایید یا در صورت بروز اشکال با مدیر سایت تماس بگیرید .',
+                    'field_enable_title' => 'فعال/غیرفعال کردن',
+                    'field_enable_label' => 'فعال‌سازی درگاه سواپ‌ولت',
+                    'field_title_title' => 'عنوان',
+                    'field_description_title' => 'توضیحات',
+                    'field_network_title' => 'شبکه فعال جهت پرداخت دلاری (TON, BSC, TRON)',
+                    'field_username_title' => 'نام کاربری درگاه سواپ‌ولت',
+                    'field_ttl_title' => 'مدت زمان اعتبار فاکتور پرداخت (دقیقه)',
+                    'field_underpaid_title' => 'درصد پوشش پرداخت کمتر از حد',
+                    'field_api_key_title' => 'API Key',
+                    'field_language_title' => 'زبان رابط کاربری',
+                    'field_language_description' => 'متن‌های پیش‌فرض درگاه را به فارسی یا انگلیسی نمایش دهید.',
+                    'field_debug_title' => 'عیب‌یابی (Debug)',
+                    'field_debug_label' => 'فعال کردن لاگ‌برداری',
+                    'field_debug_description' => 'در صورت فعال بودن، رویدادهای درگاه در لاگ ووکامرس ثبت می‌شوند.',
+                    'field_success_title' => 'پیام پرداخت موفق',
+                    'field_success_description' => 'متن پیامی که میخواهید بعد از پرداخت موفق نمایش داده شود. از {support_code} برای نمایش کد رهگیری استفاده کنید.',
+                    'field_failed_title' => 'پیام پرداخت ناموفق',
+                    'field_failed_description' => 'متن پیامی که میخواهید بعد از پرداخت ناموفق نمایش داده شود. از {fault} برای دلیل خطا و {support_code} برای کد رهگیری استفاده کنید.',
+                    'error_gateway_connect' => 'خطای ارتباط با درگاه سواپ‌ولت. لطفاً بعداً تلاش کنید.',
+                    'payment_error_prefix' => 'خطای پرداخت: ',
+                    'generic_error' => 'خطایی رخ داد',
+                    'missing_payment_url' => 'آدرس پرداخت از درگاه دریافت نشد.',
+                    'duplicate_order_expired' => 'سفارش منقضی شد به دلیل اتمام زمان/عدم پرداخت.',
+                    'missing_order' => 'شماره سفارش وجود ندارد .',
+                    'invoice_fetch_failed' => 'عدم دریافت اطلاعات تراکنش از سواپ‌ولت.',
+                    'invalid_transaction' => 'اطلاعات سفارش یا وضعیت تراکنش نامعتبر است.',
+                    'order_note_paid' => 'پرداخت با موفقیت انجام شد از طریق سواپ‌ولت.',
+                    'order_note_paid_code' => 'پرداخت موفقیت آمیز بود .<br/> کد رهگیری : %s',
+                    'invoice_expired' => 'فاکتور پرداخت منقضی شده است.',
+                    'payment_url_missing' => 'آدرس پرداخت در دسترس نیست.',
+                    'status_unknown' => 'وضعیت تراکنش نامعلوم است.',
+                    'transaction_code_label' => 'کد تراکنش : ',
+                    'return_error_note' => 'خطا در هنگام بازگشت از درگاه : %s %s',
+                ],
+                'en' => [
+                    'method_title' => 'Swap Wallet',
+                    'method_description' => 'Pay with crypto via Swap Wallet gateway.',
+                    'gateway_title' => 'Pay with Swap Wallet',
+                    'gateway_description' => 'Swap Wallet provides a fast and secure crypto payment method.',
+                    'success_message' => 'Thank you! Your order has been paid successfully.',
+                    'failed_message' => 'Payment failed. Please try again or contact the site admin if the issue persists.',
+                    'field_enable_title' => 'Enable/Disable',
+                    'field_enable_label' => 'Enable SwapWallet gateway',
+                    'field_title_title' => 'Title',
+                    'field_description_title' => 'Description',
+                    'field_network_title' => 'Active network for USD payments (TON, BSC, TRON)',
+                    'field_username_title' => 'SwapWallet gateway username',
+                    'field_ttl_title' => 'Invoice TTL (minutes)',
+                    'field_underpaid_title' => 'Underpaid coverage percent',
+                    'field_api_key_title' => 'API Key',
+                    'field_language_title' => 'Interface language',
+                    'field_language_description' => 'Show default gateway texts in Persian or English.',
+                    'field_debug_title' => 'Debug logging',
+                    'field_debug_label' => 'Enable logging',
+                    'field_debug_description' => 'If enabled, gateway events are written to WooCommerce logs.',
+                    'field_success_title' => 'Successful payment message',
+                    'field_success_description' => 'Text shown after successful payment. Use {support_code} to show the tracking code.',
+                    'field_failed_title' => 'Failed payment message',
+                    'field_failed_description' => 'Text shown after failed payment. Use {fault} for the error reason and {support_code} for the tracking code.',
+                    'error_gateway_connect' => 'SwapWallet connection error. Please try again later.',
+                    'payment_error_prefix' => 'Payment error: ',
+                    'generic_error' => 'An error occurred',
+                    'missing_payment_url' => 'Payment URL was not received from the gateway.',
+                    'duplicate_order_expired' => 'Order expired due to timeout/non-payment.',
+                    'missing_order' => 'Order id is missing.',
+                    'invoice_fetch_failed' => 'Could not retrieve transaction info from SwapWallet.',
+                    'invalid_transaction' => 'Order info or transaction status is invalid.',
+                    'order_note_paid' => 'Payment completed via SwapWallet.',
+                    'order_note_paid_code' => 'Payment was successful.<br/> Tracking code: %s',
+                    'invoice_expired' => 'Payment invoice has expired.',
+                    'payment_url_missing' => 'Payment URL is not available.',
+                    'status_unknown' => 'Transaction status is unknown.',
+                    'transaction_code_label' => 'Transaction code: ',
+                    'return_error_note' => 'Error when returning from gateway: %s %s',
+                ],
+            ];
+
+            $lang = $langOverride ?? $this->language;
+            $lang = array_key_exists($lang, $texts) ? $lang : 'fa';
+            return $texts[$lang][$key] ?? '';
+        }
+
+        private function detect_language()
+        {
+            $locale = function_exists('get_locale') ? get_locale() : 'fa_IR';
+            return (stripos($locale, 'fa') === 0) ? 'fa' : 'en';
+        }
+
+        private function t($key)
+        {
+            $text = $this->get_lang_text($key);
+            if ($text !== '') {
+                return $text;
+            }
+
+            // fallback to English if missing
+            $original_language = $this->language;
+            $this->language = 'en';
+            $fallback = $this->get_lang_text($key);
+            $this->language = $original_language;
+
+            return $fallback ?: $key;
+        }
+
+        public function get_text($key, $lang = null)
+        {
+            return $this->get_lang_text($key, $lang);
+        }
+
 
         public function admin_notice_missing_api_key()
         {
             $api_key = $this->get_option('api_key');
             if (empty($api_key) && 'yes' === $this->get_option('enabled')) {
-                $message = sprintf(
-                    'کد درگاه سواپ‌ولت خالی است. برای تکمیل مورد مربوطه به تنظیمات درگاه <a href="%s">اینجا</a> مراجعه کنید.',
-                    admin_url('admin.php?page=wc-settings&tab=checkout&section=WC_Swap_Pay')
+                $msg = ($this->language === 'en')
+                    ? 'SwapWallet API key is empty. Go to gateway settings to complete it.'
+                    : 'کد درگاه سواپ‌ولت خالی است. برای تکمیل مورد مربوطه به تنظیمات درگاه مراجعه کنید.';
+                $message = sprintf('%s <a href="%s">%s</a>',
+                    $msg,
+                    admin_url('admin.php?page=wc-settings&tab=checkout&section=WC_Swap_Pay'),
+                    ($this->language === 'en') ? 'Settings' : 'اینجا'
                 );
                 echo '<div class="notice notice-warning is-dismissible">';
                 echo '<p>' . $message . '</p>';
@@ -421,14 +571,33 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('WC_Swap_Pay')) {
         {
             $username = $this->get_option('username');
             if (empty($username) && 'yes' === $this->get_option('enabled')) {
-                $message = sprintf(
-                    'نام کاربری درگاه سواپ‌ولت خالی است. برای تکمیل مورد مربوطه به تنظیمات درگاه <a href="%s">اینجا</a> مراجعه کنید.',
-                    admin_url('admin.php?page=wc-settings&tab=checkout&section=WC_Swap_Pay')
+                $msg = ($this->language === 'en')
+                    ? 'SwapWallet username is empty. Go to gateway settings to complete it.'
+                    : 'نام کاربری درگاه سواپ‌ولت خالی است. برای تکمیل مورد مربوطه به تنظیمات درگاه مراجعه کنید.';
+                $message = sprintf('%s <a href="%s">%s</a>',
+                    $msg,
+                    admin_url('admin.php?page=wc-settings&tab=checkout&section=WC_Swap_Pay'),
+                    ($this->language === 'en') ? 'Settings' : 'اینجا'
                 );
                 echo '<div class="notice notice-warning is-dismissible">';
                 echo '<p>' . $message . '</p>';
                 echo '</div>';
             }
+        }
+
+        public function get_language()
+        {
+            return $this->language;
+        }
+
+        public function get_title()
+        {
+            return $this->title;
+        }
+
+        public function get_description()
+        {
+            return $this->description;
         }
     }
 }
