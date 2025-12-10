@@ -1,13 +1,14 @@
 <?php
-/**
- * Plugin Name: درگاه پرداخت سواپ‌ولت | SwapWallet Payment Gateway
- * Description: درگاه کریپتویی سواپ‌ولت برای ووکامرس (پرداخت رمزارزی) | SwapWallet crypto payment gateway for WooCommerce.
- * Author: SwapWallet
- * Author URI: https://swapwallet.app
- * Version: 1.0.0
- * License: GPLv2 or later
- * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- */
+/*
+  Plugin Name: درگاه پرداخت سواپ‌ولت | SwapWallet Payment Gateway
+  Description: درگاه کریپتویی سواپ‌ولت برای ووکامرس (پرداخت رمزارزی) | SwapWallet crypto payment gateway for WooCommerce.
+  Author: SwapWallet
+  Author URI: https://swapwallet.app
+  Version: 1.0.2
+  Stable tag: 1.0.2
+License: GPLv3 or later
+License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
+*/
 
 defined('ABSPATH') or die("SwapPay Wordpress Restricted Access");
 
