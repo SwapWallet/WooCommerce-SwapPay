@@ -1,5 +1,5 @@
 const swap_pay_settings =
-  window.wc.wcSettings.getSetting("WC_Swap_Pay_data", {});
+  window.wc.wcSettings.getSetting("SwapPay_WC_Gateway_data", {});
 
 const decode = window.wp.htmlEntities.decodeEntities;
 const lang = (swap_pay_settings.language || "fa").toLowerCase();
@@ -68,7 +68,7 @@ const swap_pay_Content = () => {
 };
 
 const Swap_Pay_Block_Gateway = {
-  name: "WC_Swap_Pay",
+  name: "SwapPay_WC_Gateway",
   label: swap_pay_label_with_icon,
   content: Object(window.wp.element.createElement)(swap_pay_Content, null),
   edit: Object(window.wp.element.createElement)(swap_pay_Content, null),

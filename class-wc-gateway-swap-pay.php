@@ -24,7 +24,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
         {
             $this->author = 'swapwallet.app';
 
-            $this->id = 'SWAPPAY_WC_GATEWAY';
+            $this->id = 'SwapPay_WC_Gateway';
             $this->icon = 'https://swapwallet.app/media/public/assets/wallets/swapwallet.png';
             $this->has_fields = false;
 
@@ -185,7 +185,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
             $order = wc_get_order($order_id);
             [$price, $currency] = $this->get_correct_price($order);
 
-            $CallbackURL = add_query_arg('wc_order', $order_id, WC()->api_request_url('SWAPPAY_WC_GATEWAY'));
+            $CallbackURL = add_query_arg('wc_order', $order_id, WC()->api_request_url('SwapPay_WC_Gateway'));
             $this->log('Creating invoice', [
                 'order_id' => $order_id,
                 'amount' => $price,
@@ -585,7 +585,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
                 $msg = ($this->language === 'en')
                     ? 'SwapWallet API key is empty. Go to gateway settings to complete it.'
                     : 'کد درگاه سواپ‌ولت خالی است. برای تکمیل مورد مربوطه به تنظیمات درگاه مراجعه کنید.';
-                $settings_url = esc_url(admin_url('admin.php?page=wc-settings&tab=checkout&section=SWAPPAY_WC_GATEWAY'));
+                $settings_url = esc_url(admin_url('admin.php?page=wc-settings&tab=checkout&section=SwapPay_WC_Gateway'));
                 $message = sprintf(
                     '%s <a href="%s">%s</a>',
                     esc_html($msg),
@@ -605,7 +605,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
                 $msg = ($this->language === 'en')
                     ? 'SwapWallet username is empty. Go to gateway settings to complete it.'
                     : 'نام کاربری درگاه سواپ‌ولت خالی است. برای تکمیل مورد مربوطه به تنظیمات درگاه مراجعه کنید.';
-                $settings_url = esc_url(admin_url('admin.php?page=wc-settings&tab=checkout&section=SWAPPAY_WC_GATEWAY'));
+                $settings_url = esc_url(admin_url('admin.php?page=wc-settings&tab=checkout&section=SwapPay_WC_Gateway'));
                 $message = sprintf(
                     '%s <a href="%s">%s</a>',
                     esc_html($msg),
@@ -634,7 +634,4 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
         }
     }
 
-    if (!class_exists('SWAPPAY_WC_GATEWAY')) {
-        class_alias(SwapPay_WC_Gateway::class, 'SWAPPAY_WC_GATEWAY');
-    }
 }

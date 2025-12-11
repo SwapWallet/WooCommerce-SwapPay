@@ -27,7 +27,8 @@ function swap_pay_init()
     require_once dirname(__FILE__) . '/class-wc-gateway-swap-pay.php';
 
     add_filter('woocommerce_payment_gateways', function ($gateways) {
-        $gateways[] = 'SWAPPAY_WC_GATEWAY';
+        // Register the gateway class so WooCommerce renders it in the Payments tab
+        $gateways[] = 'SwapPay_WC_Gateway';
         return $gateways;
     });
 }
@@ -42,8 +43,14 @@ add_action('rest_api_init', function () {
 
 function swap_pay_handle_webhook(WP_REST_Request $request)
 {
-    $gateways = WC()->payment_gateways->payment_gateways();
-    $gateway = $gateways['SWAPPAY_WC_GATEWAY'] ?? null;
+    // Ensure payment gateways are initialized in REST context
+    $payment_gateways = WC()->payment_gateways();
+    if (!$payment_gateways) {
+        return new WP_REST_Response(['error' => 'payment gateways not initialized'], 500);
+    }
+
+    $gateways = $payment_gateways->payment_gateways();
+    $gateway = $gateways['SwapPay_WC_Gateway'] ?? null;
     if (!$gateway) {
         return new WP_REST_Response(['error' => 'gateway not found'], 500);
     }
@@ -65,14 +72,14 @@ function swap_pay_handle_webhook(WP_REST_Request $request)
     $order = wc_get_order($order_id);
     if (!$order) {
         if ($logger && $debug_enabled) {
-            $logger->warning('[SwapPay] Webhook: order not found', ['source' => 'SWAPPAY_WC_GATEWAY', 'context' => ['order_id' => $order_id]]);
+            $logger->warning('[SwapPay] Webhook: order not found', ['source' => 'SwapPay_WC_Gateway', 'context' => ['order_id' => $order_id]]);
         }
         return new WP_REST_Response(['error' => 'order not found'], 404);
     }
 
     if ($logger && $debug_enabled) {
         $logger->info('[SwapPay] Webhook received', [
-            'source' => 'SWAPPAY_WC_GATEWAY',
+            'source' => 'SwapPay_WC_Gateway',
             'context' => [
                 'order_id' => $order_id,
                 'status' => $status,
@@ -84,19 +91,19 @@ function swap_pay_handle_webhook(WP_REST_Request $request)
         $order->payment_complete();
         $order->add_order_note('پرداخت با موفقیت انجام شد از طریق سواپ‌ولت (وبهوک).');
         if ($logger && $debug_enabled) {
-            $logger->info('[SwapPay] Webhook: order paid', ['source' => 'SWAPPAY_WC_GATEWAY', 'context' => ['order_id' => $order_id]]);
+            $logger->info('[SwapPay] Webhook: order paid', ['source' => 'SwapPay_WC_Gateway', 'context' => ['order_id' => $order_id]]);
         }
         return new WP_REST_Response(['success' => true], 200);
     } elseif ($status === 'EXPIRED') {
         $order->update_status('expired', 'سفارش به دلیل انقضای فاکتور در سواپ‌ولت منقضی شد (وبهوک).');
         if ($logger && $debug_enabled) {
-            $logger->warning('[SwapPay] Webhook: order expired', ['source' => 'SWAPPAY_WC_GATEWAY', 'context' => ['order_id' => $order_id]]);
+            $logger->warning('[SwapPay] Webhook: order expired', ['source' => 'SwapPay_WC_Gateway', 'context' => ['order_id' => $order_id]]);
         }
         return new WP_REST_Response(['expired' => true], 200);
     }
 
     if ($logger && $debug_enabled) {
-        $logger->info('[SwapPay] Webhook: status ignored', ['source' => 'SWAPPAY_WC_GATEWAY', 'context' => ['order_id' => $order_id, 'status' => $status]]);
+        $logger->info('[SwapPay] Webhook: status ignored', ['source' => 'SwapPay_WC_Gateway', 'context' => ['order_id' => $order_id, 'status' => $status]]);
     }
     return new WP_REST_Response(['received' => true], 200);
 }
