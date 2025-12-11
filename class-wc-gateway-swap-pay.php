@@ -25,7 +25,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
             $this->author = 'swapwallet.app';
 
             $this->id = 'SwapPay_WC_Gateway';
-            $this->icon = 'https://swapwallet.app/media/public/assets/wallets/swapwallet.png';
+            $this->icon =  'https://swapwallet.app/media/public/assets/wallets/swapwallet.png';
             $this->has_fields = false;
 
             $this->language = strtolower($this->detect_language());
@@ -52,6 +52,14 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
             $this->method_title = $this->get_option('title', $this->get_lang_text('method_title'));
             $this->method_description = $this->get_option('description', $this->get_lang_text('method_description'));
             $this->show_icon = $this->get_option('show_icon', 'yes') === 'yes';
+            $this->icon_url = $this->get_option('icon_url', '');
+
+            if (!empty(trim($this->icon_url))) {
+                $this->icon = esc_url_raw($this->icon_url);
+            } else {
+                $this->icon = 'https://swapwallet.app/media/public/assets/wallets/swapwallet.png';
+            }
+
             if (!$this->show_icon) {
                 $this->icon = '';
             }
@@ -157,6 +165,11 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
                     'type' => 'checkbox',
                     'default' => 'yes',
                     'description' => $this->t('field_show_icon_description'),
+                ],
+                'icon_url' => [
+                    'title' => $this->t('field_icon_title'),
+                    'type' => 'text',
+                    'description' => $this->t('field_icon_description'),
                 ],
             ];
         }
@@ -481,8 +494,10 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
                     'field_failed_title' => 'پیام پرداخت ناموفق',
                     'field_failed_description' => 'متن پیامی که میخواهید بعد از پرداخت ناموفق نمایش داده شود. از {fault} برای دلیل خطا و {support_code} برای کد رهگیری استفاده کنید.',
                     'field_show_icon_title' => 'نمایش آیکن در صفحه پرداخت',
-                    'field_show_icon_label' => 'آیکن سواپ‌ولت نمایش داده شود',
+                    'field_show_icon_label' => 'آیکن نمایش داده شود',
                     'field_show_icon_description' => 'برای مخفی کردن آیکن در تسویه‌حساب کلاسیک و بلاک‌ها، تیک را بردارید.',
+                    'field_icon_title' => 'آیکن سفارشی (URL)',
+                    'field_icon_description' => 'در صورت تمایل آدرس تصویر دلخواه را وارد کنید، در غیر این صورت آیکن پیش‌فرض سواپ‌ولت نمایش داده می‌شود.',
                     'error_gateway_connect' => 'خطای ارتباط با درگاه سواپ‌ولت. لطفاً بعداً تلاش کنید.',
                     'payment_error_prefix' => 'خطای پرداخت: ',
                     'generic_error' => 'خطایی رخ داد',
@@ -527,6 +542,8 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
                     'field_show_icon_title' => 'Show icon on checkout',
                     'field_show_icon_label' => 'Display the SwapWallet icon on checkout',
                     'field_show_icon_description' => 'Uncheck to hide the icon in both classic and blocks checkout.',
+                    'field_icon_title' => 'Custom icon URL',
+                    'field_icon_description' => 'Optional: enter a custom image URL; leave empty to use the default SwapWallet icon.',
                     'error_gateway_connect' => 'SwapWallet connection error. Please try again later.',
                     'payment_error_prefix' => 'Payment error: ',
                     'generic_error' => 'An error occurred',
@@ -633,5 +650,4 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
             return $this->description;
         }
     }
-
 }
