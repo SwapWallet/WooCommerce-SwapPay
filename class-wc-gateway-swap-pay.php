@@ -254,8 +254,7 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
                     'underPaidCoveragePercent' => $this->underPaidCoveragePercent,
                     'returnUrl' => $CallbackURL,
                     'orderId' => $order_id,
-                    // Use rest_url to honor WP REST prefix, subdirectory installs, https, etc.
-                    'webhookUrl' => rest_url('swap-pay/v1/webhook'),
+                    'webhookUrl' => add_query_arg('rest_route', '/swap-pay/v1/webhook', home_url('/')),
                     'customData' => null,
                 ])
             ]);
@@ -505,6 +504,46 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
 
             wp_safe_redirect($url);
             exit;
+        }
+
+        /**
+         * Verify webhook signature sent from SwapWallet.
+         *
+         * The platform signs the raw request body using HMAC-SHA256 with the API key.
+         */
+        public function verify_webhook_signature($raw_body, $provided_hmac)
+        {
+            $provided_hmac = trim((string) $provided_hmac);
+            if ($provided_hmac === '' || !$this->api_key) {
+                return false;
+            }
+
+            // Sender signs JSON(event) with HMAC-SHA256 using API key
+            $computed_from_event = null;
+            $decoded = json_decode($raw_body, true);
+            if (is_array($decoded) && isset($decoded['event'])) {
+                $event_json = wp_json_encode($decoded['event'], JSON_UNESCAPED_SLASHES);
+                $computed_from_event = hash_hmac('sha256', (string) $event_json, (string) $this->api_key);
+            }
+
+            // Fallback: some senders might sign the whole body
+            $computed_from_body = hash_hmac('sha256', (string) $raw_body, (string) $this->api_key);
+
+            $is_valid = false;
+            if ($computed_from_event && hash_equals($computed_from_event, $provided_hmac)) {
+                $is_valid = true;
+            } elseif (hash_equals($computed_from_body, $provided_hmac)) {
+                $is_valid = true;
+            }
+
+            $this->log('Webhook signature check', [
+                'provided' => $provided_hmac,
+                'computed_from_event' => $computed_from_event,
+                'computed_from_body' => $computed_from_body,
+                'valid' => $is_valid,
+            ], $is_valid ? 'info' : 'warning');
+
+            return $is_valid;
         }
 
         private function log($message, $context = [], $level = 'info')

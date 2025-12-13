@@ -57,17 +57,32 @@ function swap_pay_handle_webhook(WP_REST_Request $request)
 
     $logger = function_exists('wc_get_logger') ? wc_get_logger() : null;
     $debug_enabled = $gateway->get_option('debug', 'no') === 'yes';
+    $raw_body = $request->get_body();
 
     $payload = $request->get_json_params();
-    $data = $payload['result'] ?? [];
-    $status = $data['status'] ?? $payload['status'] ?? null;
+    $hmac = $payload['hmac'] ?? $request->get_header('x-swapwallet-signature');
 
-    $order_id = $data['orderId'] ?? ($payload['orderId'] ?? null);
+    if (!$gateway->verify_webhook_signature($raw_body, (string) $hmac)) {
+        if ($logger && $debug_enabled) {
+            $logger->warning('[SwapPay] Webhook: invalid HMAC', [
+                'source' => 'SwapPay_WC_Gateway',
+                'context' => ['raw_body' => $raw_body],
+            ]);
+        }
+        return new WP_REST_Response(['error' => 'invalid signature'], 401);
+    }
+
+    // Support both legacy {result:{...}} and newer {event:{invoice:{...}}} payloads
+    $event = $payload['event'] ?? [];
+    $invoice = $event['invoice'] ?? [];
+    $data = $payload['result'] ?? $invoice;
+
+    $status = $invoice['status'] ?? $data['status'] ?? $payload['status'] ?? null;
+
+    $order_id = $invoice['orderId'] ?? $data['orderId'] ?? ($payload['orderId'] ?? null);
     if (!$order_id) {
         return new WP_REST_Response(['error' => 'missing order_id'], 400);
     }
-
-    // $gateway->check_order_status($order_id);
 
     $order = wc_get_order($order_id);
     if (!$order) {
@@ -83,6 +98,7 @@ function swap_pay_handle_webhook(WP_REST_Request $request)
             'context' => [
                 'order_id' => $order_id,
                 'status' => $status,
+                'support_code' => $invoice['supportCode'] ?? null,
             ],
         ]);
     }
