@@ -34,10 +34,10 @@ jobs:
             exit 1
           fi
           echo "Setting version to $VERSION"
-          perl -pi -e "s/^(Version:\s*).*/\$1$ENV{VERSION}/" index.php
-          perl -pi -e "s/^(Stable tag:\s*).*/\$1$ENV{VERSION}/" index.php
-          perl -pi -e "s/^(Stable tag:\s*).*/\$1$ENV{VERSION}/" readme.txt
-          perl -pi -e "s/define\\('SWAPPAY_VERSION',\\s*'[^']+'\\);/define('SWAPPAY_VERSION', '$ENV{VERSION}');/" index.php
+          perl -pi -e 's/^(Version:\s*).*/$1$ENV{VERSION}/' index.php
+          perl -pi -e 's/^(Stable tag:\s*).*/$1$ENV{VERSION}/' index.php
+          perl -pi -e 's/^(Stable tag:\s*).*/$1$ENV{VERSION}/' readme.txt
+          perl -pi -e "s/define\\('SWAPPAY_VERSION',\\s*'[^']+'\\);/define('SWAPPAY_VERSION', '\$ENV{VERSION}');/" index.php
           echo "Header after bump:"
           grep -n "Version:" index.php || true
           grep -n "Stable tag:" index.php || true
