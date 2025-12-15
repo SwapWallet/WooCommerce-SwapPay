@@ -297,7 +297,8 @@ if (class_exists('WC_Payment_Gateway') && !class_exists('SwapPay_WC_Gateway')) {
             $response = wp_remote_post('https://swapwallet.app/api/v2/payment/' . $this->username . '/invoices', [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $this->api_key,
-                    'Content-Type' => 'application/json'
+                    'Content-Type' => 'application/json',
+                    'User-Agent' => 'SwapPay-WooCommerce/' . (defined('SWAPPAY_VERSION') ? SWAPPAY_VERSION : 'unknown'),
                 ],
                 'body' => wp_json_encode($payload)
             ]);
